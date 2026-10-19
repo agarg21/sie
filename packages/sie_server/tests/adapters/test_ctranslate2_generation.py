@@ -38,6 +38,8 @@ class _FakeTokenizer:
             " ami",
             " &amp;",
             " co",
+            "<2fr>",
+            "<2en>",
         ]
         self.eos_token_id = 1
 
@@ -362,9 +364,11 @@ _ESCAPED_OUTPUT = ["l", " &apos;", " ami", " &amp;", " co"]
 @pytest.mark.parametrize(
     ("unescape_moses_entities", "prompt", "expected"),
     [
-        (False, "hello world", "l &apos; ami &amp; co"),
-        (True, "hello world", "l'ami & co"),
-        (True, "hello &amp; world", "l'ami &amp; co"),
+        (False, "<2fr> hello world", "l &apos; ami &amp; co"),
+        (True, "<2fr> hello world", "l'ami & co"),
+        (True, "<2fr> hello &amp; world", "l'ami &amp; co"),
+        # Elision is only rejoined for a French target tag.
+        (True, "<2en> hello world", "l ' ami & co"),
     ],
 )
 def test_output_unescapes_moses_entities_only_when_enabled(

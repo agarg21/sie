@@ -87,6 +87,21 @@ def test_entities_present_in_the_source_are_kept() -> None:
     assert unescape_moses_entities("l &apos; ami de Tom &amp; Jerry", source) == "l'ami de Tom &amp; Jerry"
 
 
+def test_elision_is_only_repaired_for_a_french_target() -> None:
+    escaped = "Rock &apos; n &apos; Roll"
+
+    assert unescape_moses_entities(escaped, "<2en> Rock and roll") == "Rock ' n ' Roll"
+    assert unescape_moses_entities("l &apos; ami", "<2fr_CA> the friend") == "l'ami"
+
+
+def test_a_quoted_elided_letter_is_joined_like_an_elision() -> None:
+    # Pinned on purpose: a quoted single letter that is an elided form is
+    # indistinguishable from an elision, so it joins the word after it.
+    escaped = "la lettre &apos; l &apos; est muette"
+
+    assert unescape_moses_entities(escaped, _SOURCE) == "la lettre ' l'est muette"
+
+
 def test_apostrophe_present_in_the_source_keeps_its_spacing() -> None:
     source = "<2fr> Say &apos; hello"
 

@@ -28,7 +28,7 @@ from sie_server.adapters._generation_base import (
 )
 from sie_server.adapters._spec import AdapterSpec
 from sie_server.adapters._types import ERR_NOT_LOADED, ComputePrecision
-from sie_server.adapters.ctranslate2._moses_entities import unescape_moses_entities
+from sie_server.adapters.ctranslate2._moses_entities import unescape_moses_entities as _unescape_moses_entities
 from sie_server.types.grammar import GrammarSpec
 from sie_server.types.inputs import ImageInput, VideoInput
 
@@ -616,7 +616,7 @@ class CTranslate2GenerationAdapter(GenerationAdapter):
             output_tokens = result_tokens[:-1] if ended else result_tokens
             text = self._decode_tokens(output_tokens)
             if self._unescape_moses_entities:
-                text = unescape_moses_entities(text, request.prepared.prompt)
+                text = _unescape_moses_entities(text, request.prepared.prompt)
             completion_tokens = len(output_tokens)
             finish_reason: Literal["stop", "length"] = "stop" if ended else "length"
             request.loop.call_soon_threadsafe(request.complete, text, completion_tokens, finish_reason)

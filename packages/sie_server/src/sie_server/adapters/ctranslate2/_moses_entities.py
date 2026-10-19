@@ -9,11 +9,12 @@ The repair is deliberately conservative:
 
 * An entity is only unescaped when the input text does not contain it
   literally. A request that really translates ``&amp;`` keeps it.
-* Spacing is only repaired where the form is unambiguous: French elision
-  (``l &apos; offre`` becomes ``l'offre``) and balanced, space-delimited
+* Spacing is only repaired where the form is unambiguous: French elision,
+  when the prompt targets French (``<2fr>``, ``<2fr_CA>``), so
+  ``l &apos; offre`` becomes ``l'offre``; and balanced, space-delimited
   ``&quot;`` pairs (``&quot; Bonjour &quot;`` becomes ``"Bonjour"``).
   Everything else is unescaped in place and keeps its spaces, so
-  ``M &amp; M`` becomes ``M & M``.
+  ``R &amp; D`` becomes ``R & D``.
 """
 
 from __future__ import annotations
@@ -41,11 +42,15 @@ _QUOT = "&quot;"
 # c', d', j', l', m', n', s', t', the qu' family (qu', jusqu', lorsqu',
 # quelqu'...) and aujourd'hui. Only the elided word and the word after it
 # decide the join, so a single-quoted span such as ``dit &apos; oui &apos;``
-# is left spaced.
+# is left spaced, while a quoted single letter that is itself an elided form
+# (``&apos; l &apos; est``) is joined to the word after it. The join only runs
+# when the prompt targets French.
 _ELISION = re.compile(
     r"(?<!\w)([cdjlmnst]|[^\W\d_]*qu|aujourd) &apos; (?=[^\W\d_])",
     re.IGNORECASE,
 )
+# MADLAD-400's target tag for French and its regional forms.
+_FRENCH_TARGET = re.compile(r"\s*<2fr(?:_[A-Za-z]+)?>")
 
 
 def unescape_moses_entities(text: str, source: str) -> str:
@@ -53,13 +58,14 @@ def unescape_moses_entities(text: str, source: str) -> str:
 
     Args:
         text: Decoded model output.
-        source: The input text the output was generated from. Entities that
-            occur literally in it are kept as they are.
+        source: The input text the output was generated from, target tag
+            included. Entities that occur literally in it are kept as they
+            are, and French elision is only repaired for a French target tag.
     """
     escaped = frozenset(entity for entity in _ENTITIES if entity in text and entity not in source)
     if not escaped:
         return text
-    if _APOS in escaped:
+    if _APOS in escaped and _FRENCH_TARGET.match(source):
         text = _ELISION.sub(r"\1'", text)
     if _QUOT in escaped:
         text = _attach_quote_pairs(text)
@@ -71,9 +77,9 @@ def _attach_quote_pairs(text: str) -> str:
 
     The tokenizer turns ``"word"`` into ``&quot; word &quot;``. The output is
     only respaced when every escaped quote can be paired in order, each pair
-    encloses text with exactly one space on either side, an opening quote does
-    not follow a word character directly and a closing quote does not precede
-    one. A literal ``"`` elsewhere in the output, an odd count or any other
+    encloses text with exactly one space on either side, an opening quote
+    starts the text or follows whitespace and a closing quote does not precede
+    a word character. A literal ``"`` elsewhere in the output, an odd count or any other
     shape leaves the spacing as it is.
     """
     if '"' in text:
