@@ -74,7 +74,7 @@ fi
 
 echo "## Running public workspace tests"
 if [[ ${#ARGS[@]} -eq 0 ]]; then
-    mise exec -- uv run --frozen --project . --no-sync pytest -c pyproject.toml
+    mise exec -- uv run --frozen --project . --no-sync --with pytest-xdist pytest -c pyproject.toml -n auto
 else
     mise exec -- uv run --frozen --project . --no-sync pytest -c pyproject.toml ${ARGS[@]+"${ARGS[@]}"}
 fi
